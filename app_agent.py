@@ -353,12 +353,20 @@ INDEX_HTML = """
     </section>
   </div>
   <script>
-    const form = document.getElementById("convert-form");
-    const submitBtn = document.getElementById("submit-btn");
-    const errorBox = document.getElementById("error-box");
-    const meta = document.getElementById("result-meta");
-    const actions = document.getElementById("result-actions");
-    const tableRoot = document.getElementById("table-root");
+    var form = document.getElementById("convert-form");
+    var submitBtn = document.getElementById("submit-btn");
+    var errorBox = document.getElementById("error-box");
+    var meta = document.getElementById("result-meta");
+    var actions = document.getElementById("result-actions");
+    var tableRoot = document.getElementById("table-root");
+
+    function setHidden(element, isHidden) {
+      if (isHidden) {
+        element.setAttribute("hidden", "hidden");
+      } else {
+        element.removeAttribute("hidden");
+      }
+    }
 
     function showError(message) {
       errorBox.textContent = message;
@@ -371,12 +379,36 @@ INDEX_HTML = """
     }
 
     function escapeCell(value) {
-      return String(value ?? "")
+      return String(value == null ? "" : value)
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#39;");
+    }
+
+    function buildTableHead(columns) {
+      var head = "";
+      var index;
+      for (index = 0; index < columns.length; index += 1) {
+        head += "<th>" + escapeCell(columns[index]) + "</th>";
+      }
+      return head;
+    }
+
+    function buildTableBody(columns, rows) {
+      var body = "";
+      var rowIndex;
+      var columnIndex;
+      for (rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
+        body += "<tr>";
+        for (columnIndex = 0; columnIndex < columns.length; columnIndex += 1) {
+          var column = columns[columnIndex];
+          body += "<td>" + escapeCell(rows[rowIndex][column] == null ? "" : rows[rowIndex][column]) + "</td>";
+        }
+        body += "</tr>";
+      }
+      return body;
     }
 
     function renderTable(columns, rows) {
@@ -386,73 +418,86 @@ INDEX_HTML = """
         return;
       }
 
-      const head = columns.map((column) => `<th>${escapeCell(column)}</th>`).join("");
-      const body = rows.map((row) => {
-        const cells = columns.map((column) => `<td>${escapeCell(row[column] ?? "")}</td>`).join("");
-        return `<tr>${cells}</tr>`;
-      }).join("");
+      var head = buildTableHead(columns);
+      var body = buildTableBody(columns, rows);
 
       tableRoot.className = "table-shell";
-      tableRoot.innerHTML = `
-        <table>
-          <thead><tr>${head}</tr></thead>
-          <tbody>${body}</tbody>
-        </table>
-      `;
+      tableRoot.innerHTML = "<table><thead><tr>" + head + "</tr></thead><tbody>" + body + "</tbody></table>";
     }
 
     function renderMeta(payload) {
-      meta.hidden = false;
-      const modeLabel = payload.agent_used ? `Agent: ${payload.path_source}` : `Path source: ${payload.path_source}`;
-      const chosenPath = payload.resolved_records_path || "root";
-      meta.innerHTML = `
-        <span class="pill">${payload.row_count} row(s)</span>
-        <span class="pill">${payload.column_count} column(s)</span>
-        <span class="pill">Preview shows ${payload.preview_count} row(s)</span>
-        <span class="pill">${escapeCell(modeLabel)}</span>
-        <span class="pill">Using ${escapeCell(chosenPath)}</span>
-      `;
+      var modeLabel = payload.agent_used ? "Agent: " + payload.path_source : "Path source: " + payload.path_source;
+      var chosenPath = payload.resolved_records_path || "root";
+      setHidden(meta, false);
+      meta.innerHTML = ""
+        + '<span class="pill">' + payload.row_count + ' row(s)</span>'
+        + '<span class="pill">' + payload.column_count + ' column(s)</span>'
+        + '<span class="pill">Preview shows ' + payload.preview_count + ' row(s)</span>'
+        + '<span class="pill">' + escapeCell(modeLabel) + '</span>'
+        + '<span class="pill">Using ' + escapeCell(chosenPath) + '</span>';
     }
 
     function renderActions(payload) {
-      actions.hidden = false;
-      actions.innerHTML = `
-        <a href="${payload.csv_download_url}">Download CSV</a>
-        <a href="${payload.excel_download_url}">Download Excel</a>
-      `;
+      setHidden(actions, false);
+      actions.innerHTML = ""
+        + '<a href="' + payload.csv_download_url + '">Download CSV</a>'
+        + '<a href="' + payload.excel_download_url + '">Download Excel</a>';
     }
 
-    form.addEventListener("submit", async (event) => {
+    function resetPreview() {
+      setHidden(meta, true);
+      setHidden(actions, true);
+      tableRoot.className = "empty";
+      tableRoot.textContent = "Your flattened output will appear here.";
+    }
+
+    function parseJsonSafely(text) {
+      try {
+        return JSON.parse(text);
+      } catch (error) {
+        return { detail: "Received an invalid response from the server." };
+      }
+    }
+
+    function handleSubmit(event) {
       event.preventDefault();
       clearError();
       submitBtn.disabled = true;
       submitBtn.textContent = "Processing...";
 
-      const formData = new FormData(form);
-
-      try {
-        const response = await fetch("/api/convert", {
-          method: "POST",
-          body: formData
-        });
-        const payload = await response.json();
-        if (!response.ok) {
-          throw new Error(payload.detail || "Conversion failed.");
+      var formData = new FormData(form);
+      var request = new XMLHttpRequest();
+      request.open("POST", "/api/convert", true);
+      request.onreadystatechange = function () {
+        var payload;
+        if (request.readyState !== 4) {
+          return;
         }
-        renderMeta(payload);
-        renderActions(payload);
-        renderTable(payload.columns, payload.preview_rows);
-      } catch (error) {
-        meta.hidden = true;
-        actions.hidden = true;
-        tableRoot.className = "empty";
-        tableRoot.textContent = "Your flattened output will appear here.";
-        showError(error.message);
-      } finally {
+
         submitBtn.disabled = false;
         submitBtn.textContent = "Convert and Preview";
-      }
-    });
+        payload = parseJsonSafely(request.responseText || "{}");
+
+        if (request.status >= 200 && request.status < 300) {
+          renderMeta(payload);
+          renderActions(payload);
+          renderTable(payload.columns || [], payload.preview_rows || []);
+          return;
+        }
+
+        resetPreview();
+        showError(payload.detail || "Conversion failed.");
+      };
+      request.onerror = function () {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Convert and Preview";
+        resetPreview();
+        showError("Network error. Please try again.");
+      };
+      request.send(formData);
+    }
+
+    form.addEventListener("submit", handleSubmit);
   </script>
 </body>
 </html>
