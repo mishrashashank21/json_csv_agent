@@ -243,6 +243,19 @@ INDEX_HTML = """
       border: 1px solid #f5b7b7;
       display: none;
     }
+    .diagnostic {
+      margin-bottom: 14px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid #e7c98f;
+      background: #fff5dd;
+      color: #6d4c12;
+      font-size: 0.9rem;
+      line-height: 1.4;
+      display: none;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
     @media (max-width: 900px) {
       .grid { grid-template-columns: 1fr; }
       .controls { border-right: 0; border-bottom: 1px solid rgba(216, 203, 184, 0.85); }
@@ -318,6 +331,7 @@ INDEX_HTML = """
 </head>
 <body>
   <div class="page">
+    <div id="diagnostic-banner" class="diagnostic"></div>
     <section class="hero">
       <div class="hero-top">
         <h1>Nested JSON to Table Agent</h1>
@@ -353,12 +367,21 @@ INDEX_HTML = """
     </section>
   </div>
   <script>
+    var diagnosticBanner = document.getElementById("diagnostic-banner");
     var form = document.getElementById("convert-form");
     var submitBtn = document.getElementById("submit-btn");
     var errorBox = document.getElementById("error-box");
     var meta = document.getElementById("result-meta");
     var actions = document.getElementById("result-actions");
     var tableRoot = document.getElementById("table-root");
+    var diagnosticMessages = [];
+
+    function showDiagnostic(message) {
+      diagnosticMessages.push(message);
+      diagnosticBanner.textContent = diagnosticMessages.join("
+");
+      diagnosticBanner.style.display = "block";
+    }
 
     function setHidden(element, isHidden) {
       if (isHidden) {
@@ -371,6 +394,7 @@ INDEX_HTML = """
     function showError(message) {
       errorBox.textContent = message;
       errorBox.style.display = "block";
+      showDiagnostic("UI error: " + message);
     }
 
     function clearError() {
@@ -415,6 +439,7 @@ INDEX_HTML = """
       if (!columns.length) {
         tableRoot.className = "empty";
         tableRoot.textContent = "No columns were produced for this file.";
+        showDiagnostic("Preview rendered without columns.");
         return;
       }
 
@@ -423,6 +448,7 @@ INDEX_HTML = """
 
       tableRoot.className = "table-shell";
       tableRoot.innerHTML = "<table><thead><tr>" + head + "</tr></thead><tbody>" + body + "</tbody></table>";
+      showDiagnostic("Preview rendered with " + rows.length + " row(s).");
     }
 
     function renderMeta(payload) {
@@ -455,6 +481,7 @@ INDEX_HTML = """
       try {
         return JSON.parse(text);
       } catch (error) {
+        showDiagnostic("Response parse error: " + error.message);
         return { detail: "Received an invalid response from the server." };
       }
     }
@@ -462,6 +489,7 @@ INDEX_HTML = """
     function handleSubmit(event) {
       event.preventDefault();
       clearError();
+      showDiagnostic("Submitting conversion request...");
       submitBtn.disabled = true;
       submitBtn.textContent = "Processing...";
 
@@ -476,6 +504,7 @@ INDEX_HTML = """
 
         submitBtn.disabled = false;
         submitBtn.textContent = "Convert and Preview";
+        showDiagnostic("Server responded with status " + request.status + ".");
         payload = parseJsonSafely(request.responseText || "{}");
 
         if (request.status >= 200 && request.status < 300) {
@@ -497,7 +526,13 @@ INDEX_HTML = """
       request.send(formData);
     }
 
+    window.onerror = function (message, source, lineno, colno) {
+      showDiagnostic("Script error: " + message + " at line " + lineno + ":" + colno);
+    };
+
+    showDiagnostic("Client script loaded.");
     form.addEventListener("submit", handleSubmit);
+    showDiagnostic("Form handler attached.");
   </script>
 </body>
 </html>
