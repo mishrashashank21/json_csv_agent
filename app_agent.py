@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 import os
@@ -134,6 +134,7 @@ INDEX_HTML = """
       background: #fffdf8;
       color: var(--ink);
       font: inherit;
+      font-size: 16px;
     }
     .hint {
       margin-top: 6px;
@@ -188,6 +189,12 @@ INDEX_HTML = """
       background: #fffdf8;
       font-weight: 700;
     }
+    code {
+      overflow-wrap: anywhere;
+    }
+    code {
+      overflow-wrap: anywhere;
+    }
     .table-shell {
       width: 100%;
       border: 1px solid var(--line);
@@ -240,6 +247,72 @@ INDEX_HTML = """
       .grid { grid-template-columns: 1fr; }
       .controls { border-right: 0; border-bottom: 1px solid rgba(216, 203, 184, 0.85); }
       .table-shell { max-height: 50vh; }
+    }
+    @media (max-width: 640px) {
+      .page {
+        padding: 14px 10px 24px;
+      }
+      .hero {
+        border-radius: 18px;
+      }
+      .hero-top,
+      .controls,
+      .results {
+        padding: 18px 14px;
+      }
+      h1 {
+        font-size: clamp(1.7rem, 10vw, 2.5rem);
+        line-height: 1;
+      }
+      .subtext {
+        font-size: 0.94rem;
+      }
+      .actions {
+        flex-direction: column;
+      }
+      .actions a,
+      button {
+        width: 100%;
+      }
+      th, td {
+        padding: 9px 10px;
+      }
+      .table-shell {
+        max-height: 46vh;
+      }
+    }
+    @media (max-width: 640px) {
+      .page {
+        padding: 14px 10px 24px;
+      }
+      .hero {
+        border-radius: 18px;
+      }
+      .hero-top,
+      .controls,
+      .results {
+        padding: 18px 14px;
+      }
+      h1 {
+        font-size: clamp(1.7rem, 10vw, 2.5rem);
+        line-height: 1;
+      }
+      .subtext {
+        font-size: 0.94rem;
+      }
+      .actions {
+        flex-direction: column;
+      }
+      .actions a,
+      button {
+        width: 100%;
+      }
+      th, td {
+        padding: 9px 10px;
+      }
+      .table-shell {
+        max-height: 46vh;
+      }
     }
   </style>
 </head>
@@ -299,11 +372,11 @@ INDEX_HTML = """
 
     function escapeCell(value) {
       return String(value ?? "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#39;");
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
     }
 
     function renderTable(columns, rows) {
@@ -561,3 +634,4 @@ if __name__ == "__main__":
 
     # uvicorn.run("app_agent:app", host="127.0.0.1", port=8000, reload=True)
     uvicorn.run("app_agent:app", host="0.0.0.0", port=8000, reload=True)
+
