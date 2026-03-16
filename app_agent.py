@@ -252,7 +252,7 @@ INDEX_HTML = """
       color: #6d4c12;
       font-size: 0.9rem;
       line-height: 1.4;
-      display: none;
+      display: block;
       white-space: pre-wrap;
       overflow-wrap: anywhere;
     }
@@ -331,7 +331,7 @@ INDEX_HTML = """
 </head>
 <body>
   <div class="page">
-    <div id="diagnostic-banner" class="diagnostic"></div>
+    <div id="diagnostic-banner" class="diagnostic">Diagnostic banner loaded from server HTML. If you can read this, the latest page markup reached your browser.</div>
     <section class="hero">
       <div class="hero-top">
         <h1>Nested JSON to Table Agent</h1>
@@ -380,7 +380,6 @@ INDEX_HTML = """
       diagnosticMessages.push(message);
       diagnosticBanner.textContent = diagnosticMessages.join("
 ");
-      diagnosticBanner.style.display = "block";
     }
 
     function setHidden(element, isHidden) {
