@@ -128,6 +128,7 @@ INDEX_HTML = """
     }
     input[type="file"], input[type="text"] {
       width: 100%;
+      min-height: 48px;
       padding: 12px 14px;
       border: 1px solid var(--line);
       border-radius: 14px;
@@ -144,6 +145,7 @@ INDEX_HTML = """
     }
     button {
       width: 100%;
+      min-height: 48px;
       padding: 12px 16px;
       border: 0;
       border-radius: 999px;
@@ -181,6 +183,7 @@ INDEX_HTML = """
       align-items: center;
       justify-content: center;
       min-width: 140px;
+      min-height: 44px;
       padding: 10px 14px;
       text-decoration: none;
       border-radius: 999px;
@@ -188,9 +191,6 @@ INDEX_HTML = """
       color: var(--ink);
       background: #fffdf8;
       font-weight: 700;
-    }
-    code {
-      overflow-wrap: anywhere;
     }
     code {
       overflow-wrap: anywhere;
@@ -205,6 +205,7 @@ INDEX_HTML = """
       max-height: 62vh;
       background: #fffdf9;
       display: block;
+      -webkit-overflow-scrolling: touch;
     }
     table {
       width: max-content;
@@ -252,9 +253,11 @@ INDEX_HTML = """
       color: #6d4c12;
       font-size: 0.9rem;
       line-height: 1.4;
-      display: block;
       white-space: pre-wrap;
       overflow-wrap: anywhere;
+    }
+    .diagnostic[hidden] {
+      display: none;
     }
     @media (max-width: 900px) {
       .grid { grid-template-columns: 1fr; }
@@ -280,42 +283,11 @@ INDEX_HTML = """
       .subtext {
         font-size: 0.94rem;
       }
+      .meta,
       .actions {
-        flex-direction: column;
+        gap: 10px;
       }
-      .actions a,
-      button {
-        width: 100%;
-      }
-      th, td {
-        padding: 9px 10px;
-      }
-      .table-shell {
-        max-height: 46vh;
-      }
-    }
-    @media (max-width: 640px) {
-      .page {
-        padding: 14px 10px 24px;
-      }
-      .hero {
-        border-radius: 18px;
-      }
-      .hero-top,
-      .controls,
-      .results {
-        padding: 18px 14px;
-      }
-      h1 {
-        font-size: clamp(1.7rem, 10vw, 2.5rem);
-        line-height: 1;
-      }
-      .subtext {
-        font-size: 0.94rem;
-      }
-      .actions {
-        flex-direction: column;
-      }
+      .pill,
       .actions a,
       button {
         width: 100%;
@@ -331,7 +303,7 @@ INDEX_HTML = """
 </head>
 <body>
   <div class="page">
-    <div id="diagnostic-banner" class="diagnostic">Diagnostic banner loaded from server HTML. If you can read this, the latest page markup reached your browser.</div>
+    <div id="diagnostic-banner" class="diagnostic" hidden></div>
     <section class="hero">
       <div class="hero-top">
         <h1>Nested JSON to Table Agent</h1>
@@ -368,6 +340,7 @@ INDEX_HTML = """
   </div>
   <script>
     var diagnosticBanner = document.getElementById("diagnostic-banner");
+    var debugEnabled = window.location.search.indexOf("debug=1") !== -1;
     var form = document.getElementById("convert-form");
     var submitBtn = document.getElementById("submit-btn");
     var errorBox = document.getElementById("error-box");
@@ -377,9 +350,12 @@ INDEX_HTML = """
     var diagnosticMessages = [];
 
     function showDiagnostic(message) {
+      if (!debugEnabled) {
+        return;
+      }
       diagnosticMessages.push(message);
-      diagnosticBanner.textContent = diagnosticMessages.join("
-");
+      diagnosticBanner.textContent = diagnosticMessages.join("\n");
+      diagnosticBanner.removeAttribute("hidden");
     }
 
     function setHidden(element, isHidden) {
